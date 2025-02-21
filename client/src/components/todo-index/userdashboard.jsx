@@ -1,27 +1,29 @@
+import { useContext, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom"
+import { store } from "../../App";
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
-import { useCookies } from "react-cookie"
-import { Link, useNavigate } from "react-router-dom";
-import './todoindex.css'
 
-
-
-export function Userdashboard(){
-    const [cookies,setcookie,removecookie]=useCookies(['UserId']);
-    const [data,setdata]=useState([{Title:'',Description:'',date:'',AppoinmentId:0}]);
-   
-    function signOutClick(){
-        alert(`${cookies['UserId']} signout successfully`);
-        removecookie(['UserId']);
-
-    }
+export const Userdashboard=()=>{
+    const [token,setToken]=useContext(store)
+    const [data,setdata]=useState([{Title:'',Description:'',date:'',AppoinmentId:0,UserId:""}]);
+    let naviagte=useNavigate();
     useEffect(()=>{
-        axios.get(`http://127.0.0.1:1234/appoinment/${cookies['UserId']}`)
-        .then(response=>{
-            setdata(response.data);
+        axios.get(`http://127.0.0.1:1234/myprofile`,{
+            headers:{'token':token}
+        }).then(res=>{
+            axios.get(`http://127.0.0.1:1234/appoinment/${res.data.UserId}`).then(res=>{
+                setdata(res.data)
+            }).catch(err=>{
+                console.log(err)
+            })
+        }).catch(err=>{
+            console.log(err);
         })
-        
-    },[]);
+    },[])
+    if(!token){
+        return naviagte('/login');
+     }
+
     function removeClick(e){
         
         axios.delete(`http://127.0.0.1:1234/delete-appoinment/${e.target.id}`)
@@ -30,12 +32,12 @@ export function Userdashboard(){
             window.location.href = "http://localhost:3000/user-dashboard?"; 
         })
     }
-    
+
     return(<div className="bg-image">
         <header>
         <nav className="d-flex justify-content-between overflow-auto">
-        <h3 className="text-light mt-2">{cookies['UserId']} Dashboard</h3>
-        <Link to='/home'><button className=" mt-2 btn btn-danger p-1" onClick={signOutClick}>Signout</button></Link>
+        <h3 className="text-light mt-2">{data[0].UserId} Dashboard</h3>
+        <Link to='/home'><button className=" mt-2 btn btn-danger p-1" onClick={()=>setToken(null)}>Signout</button></Link>
         
         </nav>
         <Link to='/add-appoinment'><button className="btn btn-dark bi bi-plus text-white mt-4"> Add Appoinment</button></Link>

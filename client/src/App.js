@@ -8,24 +8,16 @@ import { Login } from "./components/todo-index/login";
 import { Userdashboard } from "./components/todo-index/userdashboard";
 import { Add_appoinment } from "./components/todo-index/add-appoinment";
 import { EditAppoinment } from "./components/todo-index/edit-appoinment";
+import { createContext, useState } from "react";
+
+
+export const store=createContext();
 
 function App() {
+  const [token,setToken]=useState(null);
   return (
     <div className="container-fluid bg-image">
-      {/* <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header> */}
+      <store.Provider value={[token,setToken]}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<TodoIndex />}></Route>
@@ -37,6 +29,7 @@ function App() {
           <Route path='edit-appoinment/:id' element={<EditAppoinment />}></Route>
         </Routes>
       </BrowserRouter>
+      </store.Provider>
     </div>
   );
 }

@@ -1,13 +1,18 @@
 
-var express=require('express');
-var cors=require('cors');
-var app=express();
-// var mongodbconnection="mongodb+srv://root:root@cluster-1.hlj6i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster-1";
-var mongodbconnection="mongodb://localhost:27017/"
-var mongodbClient=require('mongodb').MongoClient;
+require('dotenv').config()
+const express=require('express');
+const cors=require('cors');
+const app=express();
+var mongodbconnection=process.env.MongoDB_connection;
+// const mongodbconnection="mongodb://localhost:27017/"
+const mongodbClient=require('mongodb').MongoClient;
 app.use(cors());
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
+const jwt=require('jsonwebtoken');
+const middleware=require('./middleware');
+const {ObjectId}=require('mongodb');
+const PORT=process.env.PORT || 2000
 
 // routes
 
@@ -20,20 +25,7 @@ app.get('/',(req,res)=>{
 
 // adding user
 app.post('/add-user',async(req,res)=>{
-    // var user={
-    //     UserId:req.body.UserId,
-    //     UserName:req.body.UserName,
-    //     Password:req.body.Password,
-    //     Email:req.body.Email,
-    //     Mobile:req.body.Mobile
-    // }
-    // mongodbClient.connect(mongodbconnection).then(clientObj=>{
-    //     var database=clientObj.db('todo-react');
-    //     database.collection('tblusers').insertOne(user).then(()=>{
-    //         res.send('user created');
-    //         res.end();
-    //     })
-    // })
+    
     try{
         const {UserId,UserName,Password,Email,Mobile}=req.body;
         if(!UserId || !UserName || !Password ||!Email ||!Mobile){
@@ -59,17 +51,57 @@ app.post('/add-user',async(req,res)=>{
     }
 });
 
-// all users
+// based user id
 
-app.get('/users',(req,res)=>{
-    mongodbClient.connect(mongodbconnection).then(clientObj=>{
-        var database=clientObj.db('todo-react');
-        database.collection('tblusers').find({}).toArray().then(users=>{
-            res.send(users);
+app.get('/login/:userid',async(req,res)=>{
+    const id=req.params.userid;
+    try{
+        const clientObj=await mongodbClient.connect(mongodbconnection);
+        const database=clientObj.db('todo-react');
+        const collection=database.collection('tblusers');
+        const existUser=await collection.findOne({UserId:id});
+        const payload={
+            user:{
+              id:existUser._id
+            }
+        }
+        jwt.sign(payload,'naveen',{expiresIn:'1h'},(err,token)=>{
+            if(err){
+                return console.log(err);
+            }
+            res.send({token});
             res.end();
         })
-    })
-})
+  
+    }
+        
+    catch(err){
+        console.log(err)
+        res.send('internal server error')
+    }
+});
+
+// user dashboard
+app.get('/myprofile',middleware,async(req,res)=>{
+    
+    try{
+        const clientObj=await mongodbClient.connect(mongodbconnection);
+        const database=clientObj.db('todo-react');
+        const collection=database.collection('tblusers');
+        const id=new ObjectId(req.user.id)
+        const existUser=await collection.findOne({_id:id});
+        if(!existUser){
+            return res.send('user not found')
+        }
+      res.send(existUser);
+      res.end();
+    }
+        
+    catch(err){
+        console.log(err)
+        res.send('internal server error')
+    }
+});
 
 //route for appoinments
 
@@ -82,13 +114,7 @@ app.post('/add-appoinment',async(req,res)=>{
         date:new Date(req.body.date),
         UserId:req.body.UserId
     }
-    // mongodbClient.connect(mongodbconnection).then(clientObj=>{
-    //     var database=clientObj.db('todo-react');
-    //     database.collection('tblappoinment').insertOne(appoinment).then(()=>{
-    //         res.send('appionment created');
-    //         res.end();
-    //     })
-    // })
+    
     try{
         
         if(!appoinment.UserId || !appoinment.AppoinmentId || !appoinment.Title||!appoinment.Description||!appoinment.date){
@@ -115,13 +141,7 @@ app.post('/add-appoinment',async(req,res)=>{
 // based on userid appoinment
 app.get('/appoinment/:userid',async(req,res)=>{
     var id=req.params.userid;
-    // mongodbClient.connect(mongodbconnection).then(clientObj=>{
-    //     var database=clientObj.db('todo-react');
-    //     database.collection('tblappoinment').find({UserId:id}).toArray().then(appoinment=>{
-    //         res.send(appoinment);
-    //         res.end();
-    //     })
-    // })
+    
     try{
         const clientObj=await mongodbClient.connect(mongodbconnection);
         const database=clientObj.db('todo-react');
@@ -166,13 +186,7 @@ app.put('/edit-appoinment/:appoinmentid',async(req,res)=>{
         date:new Date(req.body.date),
         UserId:req.body.UserId
     }
-    // mongodbClient.connect(mongodbconnection).then(clientObj=>{
-    //     var database=clientObj.db('todo-react');
-    //     database.collection('tblappoinment').updateOne({AppoinmentId:id},{$set:appoinment}).then(()=>{
-    //         res.send('updated successfully');
-    //         res.end();
-    //     })
-    // })
+  
     try{
         const clientObj=await mongodbClient.connect(mongodbconnection);
         const database=clientObj.db('todo-react');
@@ -197,13 +211,7 @@ app.put('/edit-appoinment/:appoinmentid',async(req,res)=>{
 // delete appoinment using appoinment id
 app.delete('/delete-appoinment/:appoinmentid',async(req,res)=>{
     var id=parseInt(req.params.appoinmentid);
-    // mongodbClient.connect(mongodbconnection).then(clientObj=>{
-    //     var database=clientObj.db('todo-react');
-    //     database.collection('tblappoinment').deleteOne({AppoinmentId:id}).then(()=>{
-    //         res.send('deleted appoinment successfully');
-    //         res.end()
-    //     })
-    // })
+    
     try{
         const clientObj=await mongodbClient.connect(mongodbconnection);
         const database=clientObj.db('todo-react');
@@ -224,6 +232,6 @@ app.delete('/delete-appoinment/:appoinmentid',async(req,res)=>{
     }
 })
 
-app.listen(1234,()=>{
-    console.log('server started: http://127.0.0.1:1234')
+app.listen(PORT,()=>{
+    console.log(`server started: http://127.0.0.1:${PORT}`)
 })
