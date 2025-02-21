@@ -17,10 +17,10 @@ export function Register(){
         axios.post('http://127.0.0.1:1234/add-user',data)
        .then((response)=>{
         alert('user is added successfully');
-        // if(response.data)
+        navigate('/login'); 
         
        });
-       navigate('/login'); }
+       }
 
 
     return(<div className="container-fluid d-flex justify-content-center  " >
